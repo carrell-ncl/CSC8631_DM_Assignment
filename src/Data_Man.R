@@ -6,6 +6,8 @@ load.project()
 #Input details of the dataset.
 nhanes2 = nhanes.2015.2016
 
+nhanes2
+
 #nhanes2 = read.csv('/Users/carrell/Desktop/nhanes_2015_2016.txt')
 
 colnames(nhanes2)
@@ -82,8 +84,9 @@ nhanes2[Age >49 & Age <60, agegroup := "50-59"]
 nhanes2[Age >59 & Age <70, agegroup := "60-69"]
 nhanes2[Age >69 & Age <81, agegroup := "70-80+"]
 
-nhanes2$agegroup
-colnames(nhanes2)
+nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
+
+
 
 #Find the numeric columns
 numeric_vars = unlist(lapply(nhanes2, is.numeric))
@@ -117,14 +120,21 @@ grp = function(data, group_var, analyse_var){
   print(total)
 }
 
+grp(nhanes2, 'Gender', 'BMXBMI')
+smoke = count(nhanes2, agegroup, wt_var = Smoked_100)
+smoke = filter(smoke, wt_var != "Don't know" & wt_var != 'Refused')
+smoke
+example(summarise)
+
 #Box plots
 
 b1 = ggplot(nhanes2, aes(x=agegroup, y=Systolic_BP1, color=Gender)) + 
   geom_boxplot()
+b1
 b1_test = filter(nhanes2, Age>69)
 grp(b1_test, 'Gender', 'Systolic_BP1')
-#2 hypothesis test. 1 to see if men of all ages have higher Systolic BP than females, and 
-#another to test if females aged 70+ have a higher Systolic BP than men.
+#Hypothesis test. 1 to see if men of all ages have higher Systolic BP than females, and 
+#another to test if females aged 70+ have a higher Systolic BP than men. (test below)
 
 #Filter dataframe to remove below value
 df2 = filter(nhanes2, Education !='9')
@@ -133,9 +143,11 @@ b2 = ggplot(df2, aes(x=Education, y=Income_to_Pov, color=Gender)) +
 b2
 
 nhanes2$Household_Size = as.factor(nhanes2$Household_Size)
-b3 = ggplot(nhanes2, aes(x=Household_Size, y=Income_to_Pov, color=Household_Size)) + 
+b3 = ggplot(nhanes2, aes(x=Household_Size, y=Income_to_Pov, color=Gender)) + 
   geom_boxplot()
 b3
+#Hypothesis test to see if females living alone earn more than men living on their own 
+#(test below)
 
 
 b4 = ggplot(nhanes2, aes(x=Race, y=Income_to_Pov, color=Gender)) + 
@@ -152,8 +164,8 @@ grp(nhanes2, 'Gender', 'BMXBMI')
 #Filter dataframe to remove below values
 df1 = filter(nhanes2, Smoked_100 !="Don't know" & Smoked_100 !='Refused')
 
-s2 + scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
 s2 = ggplot(df1, aes(x=Systolic_BP1, y=Systolic_BP2, color = Smoked_100)) + geom_point(alpha=0.5)
+s2 + scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
 corr('Systolic_BP1', 'Systolic_BP2')
 
 s3 = ggplot(df1, aes(x=Systolic_BP1, y=BMXBMI, color = Smoked_100)) + geom_point(alpha=0.5)
@@ -169,41 +181,89 @@ grid.arrange(
 )
 
 
-#Hypothesis testing
+#Hypothesis testing - all below tests based on significance level of 0.05
 #T-test to see if male who has smoked 100 cigarettes in his live and had at least 12 
 #alcoholic drinks in 1 year has a higher Systolic blood pressure than a male who has not.
 #H0 != H1
 
-t1 = filter(nhanes2, Gender=='Male' & Smoked_100=='Yes' & Alcohol_Year=='Yes')
-t2 = filter(nhanes2, Gender=='Male' & Smoked_100=='No' & Alcohol_Year=='No')
+test1_1 = filter(nhanes2, Gender=='Male' & Smoked_100=='Yes' & Alcohol_Year=='Yes')
+test1_2 = filter(nhanes2, Gender=='Male' & Smoked_100=='No' & Alcohol_Year=='No')
 
 #Test using the t.test function
-t.test(t1$Systolic_BP1, t2$Systolic_BP1, alternative = "two.sided", 
+t.test(test1_1$Systolic_BP1, test1_2$Systolic_BP1, alternative = "two.sided", 
        var.equal = FALSE, paired = FALSE)
 #Test manually. As the std_dev on each sample are not similar, I have used the 
 #unpooled approach
-n1 = nrow(t1)
-n2 = nrow(t2)
-u1 = mean(t1$Systolic_BP1, na.rm = TRUE)
-u2 = mean(t2$Systolic_BP1, na.rm = TRUE)
-sig1 = sd(t1$Systolic_BP1, na.rm = TRUE)
-sig2 = sd(t2$Systolic_BP1, na.rm = TRUE)
+t1_n1 = nrow(t1)
+t1_n2 = nrow(t2)
+t1_u1 = mean(t1$Systolic_BP1, na.rm = TRUE)
+t1_u2 = mean(t2$Systolic_BP1, na.rm = TRUE)
+t1_sig1 = sd(t1$Systolic_BP1, na.rm = TRUE)
+t1_sig2 = sd(t2$Systolic_BP1, na.rm = TRUE)
 
-t_test = (u1-u2)/sqrt(((sig1^2)/n1)+((sig2^2)/n2))
+t_test = (t1_u1-t1_u2)/sqrt(((t1_sig1^2)/t1_n1)+((t1_sig2^2)/t1_n2))
 t_test
 
 #t-score for inbuilt_funtion = 4.6317, t-score worked out manually is 4.73. Both give a 
 #p-value of <0.00001 which provides us with sufficient evidence to reject the null hypothesis 
 #and say that a male who has drank and smoked does have a higher systolic blood pressure than
 #a male who has not. We can futher back this up by looking at the confidence intervals 
-#(2.7, 6.67) and seeing that 0 does not fall within this.
+#(2.7, 6.67) and seeing that 0 does not fall within this. Will run similar test for only the 
+#alcohol part of this (below)
 
-#Hypothesis test 2.1 - Do men of all ages have higher Systolic BP than women.
+#T-test to see if somoen who has at least 12 alcoholic drinks in a year has a higher Systolic 
+#BP than someone who has not.
 
-#Hypothesis test 3
-#Do females have a higher BMI than men
+test2_1 = filter(nhanes2, Gender=='Male' & Alcohol_Year=='Yes')
+test2_2 = filter(nhanes2, Gender=='Male' & Alcohol_Year=='No')
+
+#As the variance is similar (testing below), we will use thr pooled approach
+sd(test2_1$Systolic_BP1, na.rm = TRUE)
+sd(test2_2$Systolic_BP1, na.rm = TRUE)
 
 
+t.test(test2_1$Systolic_BP1, test2_2$Systolic_BP1, alternative = 'two.sided', var.equal = TRUE)
+
+#P-value of 0.02299 still provides us with enough evidence to reject the null and conclude that
+#'on average' people who drink 12 alcoholic drinkls per year have a higher systolic BP than
+#those tho don't
+
+#Hypothesis test 3 - Do men of all ages have higher Systolic BP than women.
+test3_1 = filter(nhanes2, Gender == 'Male')
+test3_2 = filter(nhanes2, Gender == 'Female')
+
+#Testing variancwe below. As the variance differs, we will use the unpooled approach
+sd(test3_1$Systolic_BP1, na.rm = TRUE)
+sd(test3_2$Systolic_BP1, na.rm = TRUE)
+
+t.test(test3_1$Systolic_BP1, test3_2$Systolic_BP1, alternative = 'two.sided', var.equal = FALSE)
+
+#Hypothesis test to see if women >69 have a higher Systolic BP than men of the similar age
+test4_1 = filter(nhanes2, Gender == 'Female' & Age > 69)
+test4_2 = filter(nhanes2, Gender == 'Male' & Age > 69)
+
+#Testing variancwe below. As the variance is similar, the pooled approach will be used
+sd(test4_1$Systolic_BP1, na.rm = TRUE)
+sd(test4_2$Systolic_BP1, na.rm = TRUE)
+
+t.test(test4_1$Systolic_BP1, test4_2$Systolic_BP1, alternative = 'two.sided', var.equal = TRUE)
+
+#Hypothesis test to see if females living alone earn more than males living alone.
+test5_1 = filter(nhanes2, Gender == 'Female' & Household_Size == '1')
+test5_2 = filter(nhanes2, Gender == 'Male' & Household_Size == '1')
+
+#Signifincant difference in variance, so we will used the unpooled approach
+sd(test5_1$Income_to_Pov, na.rm = TRUE)
+sd(test5_2$Income_to_Pov, na.rm = TRUE)
+
+t.test(test5_1$Income_to_Pov, test5_2$Income_to_Pov, alternative = 'two.sided', var.equal = FALSE)
+
+#With a p-value of 0.9063, we fail to reject the null hypothesis based on a significance 
+#level of 0.05. Confidence level also includes 0 which 
+
+test1 = filter(nhanes2, Gender == 'Female', agegroup == '30-39')#, Smoked_100 == 'Yes')
+test2 = filter(nhanes2, Gender == 'Male', agegroup == '30-39')#, Smoked_100 == 'Yes')
+nrow(test2)
 
 #Hypoth testing
 #CHECK ASSUMPTIONS
