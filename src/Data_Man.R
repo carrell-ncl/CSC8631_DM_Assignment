@@ -8,12 +8,8 @@ nhanes2 = nhanes.2015.2016
 
 nhanes2
 
-#nhanes2 = read.csv('/Users/carrell/Desktop/nhanes_2015_2016.txt')
-
-colnames(nhanes2)
-
-if(!require(devtools)) install.packages("devtools")
-devtools::install_github("kassambara/ggpubr")
+#if(!require(devtools)) install.packages("devtools")
+#devtools::install_github("kassambara/ggpubr")
 #install.packages("ggpubr")
 #Import libraries
 # library(ggplot2)
@@ -103,7 +99,7 @@ correlations
 corrplot(correlations)
 
 #Simple function to quickly work out correlation between 2 variables
-corr = function(var1, var2){
+corr_func = function(var1, var2){
   v1 = nhanes2[[var1]]
   v2 = nhanes2[[var2]]
   cor(v1, v2, use = 'complete.obs')
@@ -112,7 +108,7 @@ corr = function(var1, var2){
 corr('Systolic_BP1', 'Systolic_BP2')
 
 #Function to take dataset, group_by and analyse variable to output mean, min and max
-grp = function(data, group_var, analyse_var){
+grp_func = function(data, group_var, analyse_var){
   grouped = data %>% group_by(data[[group_var]])
   detail= grouped %>% summarise(Mean=mean(.data[[analyse_var]], na.rm = TRUE), Max=max(.data[[analyse_var]], na.rm = TRUE), Min=min(.data[[analyse_var]], na.rm = TRUE))
   total = data %>% summarise(Mean=mean(.data[[analyse_var]], na.rm = TRUE), Max=max(.data[[analyse_var]], na.rm = TRUE), Min=min(.data[[analyse_var]], na.rm = TRUE))
@@ -120,11 +116,111 @@ grp = function(data, group_var, analyse_var){
   print(total)
 }
 
-grp(nhanes2, 'Gender', 'BMXBMI')
-smoke = count(nhanes2, agegroup, wt_var = Smoked_100)
-smoke = filter(smoke, wt_var != "Don't know" & wt_var != 'Refused')
+#Fuction that takes dataframe, group variable, and binary variable to analyse. Then outputs a new dataframe
+#based on these arguments which provides ther proportions (split by gender)
+prop_func = function(data, group_var, analyse_var, percentage=TRUE){
+  data = filter(data, .data[[analyse_var]]!="Don't know" & .data[[analyse_var]]!= 'Refused')
+  male = filter(data, Gender=='Male')
+  pro_tab1 = male %>%
+    count(.data[[group_var]], .data[[analyse_var]], na.rm = TRUE) %>%
+    mutate(Proportion = prop.table(n))
+  if (percentage==TRUE){
+  pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = percent(n/sum(n)))
+  }
+  else{
+    pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = n/sum(n))
+  }
+  female = filter(data, Gender=='Female')
+  pro_tab2 = female %>%
+    count(.data[[group_var]], .data[[analyse_var]], na.rm = TRUE) %>%
+    mutate(Proportion = prop.table(n))
+  if (percentage==TRUE){
+  pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = percent(n/sum(n)))
+  }
+  else {
+    pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = n/sum(n))
+  }
+  pro3 = cbind(pro1, Female_Proportion = pro2$Female_Proportion)
+  
+  
+  return(pro3)
+  
+}
+
+dat = prop_func(nhanes2, 'Race', 'Smoked_100', percentage = FALSE)
+dat
+
+
+
+prop_func(nhanes2, 'Race', 'Alcohol_Year')
+filter(nhanes2, .data[['Gender']] =='Female')
+
+smoke_df = filter(nhanes2, Smoked_100!="Don't know" & Smoked_100!='Refused')
+prop = smoke_df %>%
+  count(.data[['agegroup']], .data[['Smoked_100']], na.rm = TRUE) %>%
+  mutate(prop = prop.table(n)) 
+
+smoke = group_by(prop, agegroup) %>% transmute(Smoked_100, Proportion1 = n/sum(n))
+
+alc = filter(nhanes2, Alcohol_Year!="Don't know" & Alcohol_Year!='Refused')
+propa = alc %>%
+  count(.data[['agegroup']], .data[['Alcohol_Year']], na.rm = TRUE) %>%
+  mutate(prop = prop.table(n)) 
+
+alc2 = propa %>% group_by(propa[['agegroup']]) %>% transmute(.data[['Alcohol_Year']], Proportion1 = percent(n/sum(n)))
+alc2
+
 smoke
-example(summarise)
+
+library(scales) #Import library to convert to percentage
+
+p1 = smoke[1:2,]
+p2 = smoke[3:4,]
+p3 = smoke[5:6,]
+p4 = smoke[7:8,]
+
+
+pie1 = ggplot(p1, aes(x='', y=Proportion, fill =Smoked_100 )) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie1
+
+pie2 = ggplot(p2, aes(x='', y=Proportion, fill =Smoked_100 )) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 30-39') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie2
+
+pie3 = ggplot(p3, aes(x='', y=Proportion, fill =Smoked_100)) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 40-49') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie3
+
+pie4 = ggplot(p4, aes(x='', y=Proportion, fill =Smoked_100)) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 50-59') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie4
+
+grid.arrange(
+  pie1, pie2, pie3, pie4, nrow=2, ncol = 2, top = 'Proportion of people who have smoked 100 cigarettes'
+)
+
+testing = filter(nhanes2, agegroup == '18-29' & Smoked_100 !="Don't know" & Smoked_100 !='Refused')
 
 #Box plots
 
@@ -132,7 +228,7 @@ b1 = ggplot(nhanes2, aes(x=agegroup, y=Systolic_BP1, color=Gender)) +
   geom_boxplot()
 b1
 b1_test = filter(nhanes2, Age>69)
-grp(b1_test, 'Gender', 'Systolic_BP1')
+grp_func(b1_test, 'Gender', 'Systolic_BP1')
 #Hypothesis test. 1 to see if men of all ages have higher Systolic BP than females, and 
 #another to test if females aged 70+ have a higher Systolic BP than men. (test below)
 
@@ -154,27 +250,35 @@ b4 = ggplot(nhanes2, aes(x=Race, y=Income_to_Pov, color=Gender)) +
   geom_boxplot()
 b4
 
-#Scatter plots to visualise come of the correlations
+#Scatter plots to visualise some of the correlations
 
-s1 = ggplot(nhanes2, aes(x=BMXWAIST, y=BMXBMI, color=Gender)) + geom_point(alpha=0.5)
+s1 = ggplot(nhanes2, aes(x=BMXWAIST, y=BMXBMI, color=Gender)) + 
+  geom_point(alpha=0.2) +
+  scale_color_manual(breaks = c('Male', 'Female'), values = c('blue', 'red'))
 s1
-corr('BMXWAIST', 'BMXBMI')
-grp(nhanes2, 'Gender', 'BMXBMI')
+corr_func('BMXWAIST', 'BMXBMI')
+grp_func(nhanes2, 'Gender', 'BMXBMI')
 
 #Filter dataframe to remove below values
 df1 = filter(nhanes2, Smoked_100 !="Don't know" & Smoked_100 !='Refused')
 
-s2 = ggplot(df1, aes(x=Systolic_BP1, y=Systolic_BP2, color = Smoked_100)) + geom_point(alpha=0.5)
-s2 + scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
-corr('Systolic_BP1', 'Systolic_BP2')
+s2 = ggplot(df1, aes(x=Systolic_BP1, y=Systolic_BP2, color = Smoked_100)) + 
+  geom_point(alpha=0.2) + 
+  scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
+s2
+corr_func('Systolic_BP1', 'Systolic_BP2')
 
-s3 = ggplot(df1, aes(x=Systolic_BP1, y=BMXBMI, color = Smoked_100)) + geom_point(alpha=0.5)
-s3 + scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
-corr('Systolic_BP1', 'BMXBMI')
+s3 = ggplot(df1, aes(x=Systolic_BP1, y=BMXBMI, color = Smoked_100)) + 
+  geom_point(alpha=0.2) + 
+  scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
+s3
+corr_func('Systolic_BP1', 'BMXBMI')
 
-s4 = ggplot(df1, aes(x=Age, y=Systolic_BP1, color = Smoked_100)) + geom_point(alpha=0.5)
-s4 + scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
-corr('Age', 'Systolic_BP1')
+s4 = ggplot(df1, aes(x=Age, y=Systolic_BP1, color = Smoked_100)) + 
+  geom_point(alpha=0.2) + 
+  scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
+s4
+corr_func('Age', 'Systolic_BP1')
 
 grid.arrange(
   s1, s2, s3, s4, nrow=2, ncol = 2, top = 'title'
@@ -182,6 +286,7 @@ grid.arrange(
 
 
 #Hypothesis testing - all below tests based on significance level of 0.05
+
 #T-test to see if male who has smoked 100 cigarettes in his live and had at least 12 
 #alcoholic drinks in 1 year has a higher Systolic blood pressure than a male who has not.
 #H0 != H1
@@ -194,12 +299,12 @@ t.test(test1_1$Systolic_BP1, test1_2$Systolic_BP1, alternative = "two.sided",
        var.equal = FALSE, paired = FALSE)
 #Test manually. As the std_dev on each sample are not similar, I have used the 
 #unpooled approach
-t1_n1 = nrow(t1)
-t1_n2 = nrow(t2)
-t1_u1 = mean(t1$Systolic_BP1, na.rm = TRUE)
-t1_u2 = mean(t2$Systolic_BP1, na.rm = TRUE)
-t1_sig1 = sd(t1$Systolic_BP1, na.rm = TRUE)
-t1_sig2 = sd(t2$Systolic_BP1, na.rm = TRUE)
+t1_n1 = nrow(test1_1)
+t1_n2 = nrow(test1_2)
+t1_u1 = mean(test1_1$Systolic_BP1, na.rm = TRUE)
+t1_u2 = mean(test1_2$Systolic_BP1, na.rm = TRUE)
+t1_sig1 = sd(test1_1$Systolic_BP1, na.rm = TRUE)
+t1_sig2 = sd(test1_2$Systolic_BP1, na.rm = TRUE)
 
 t_test = (t1_u1-t1_u2)/sqrt(((t1_sig1^2)/t1_n1)+((t1_sig2^2)/t1_n2))
 t_test
@@ -279,3 +384,4 @@ nrow(test2)
 #Systolic blood pressure increases with age. Males have on average higher BP than females
 #until 70+ years where males appear to have a lower BP
 #Females appear to have higher BMI than men
+
