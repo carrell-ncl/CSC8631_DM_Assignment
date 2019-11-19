@@ -1,5 +1,4 @@
 nhanes2 = nhanes.2015.2016
-summary(nhanes2)
 
 #Rename columns - created a new datas et incase I need to revert back to original
 nhanes2 = nhanes2 %>% rename(Gender = RIAGENDR, Age = RIDAGEYR, Race = RIDRETH1, 
@@ -41,10 +40,11 @@ nhanes2$Marital_Status = recode(nhanes2$Marital_Status, '1' = 'Married', '2'= 'W
                                 '3'= 'Divorced', '4'= 'Separated', '5'= 'Never Married', 
                                 '6'= 'Living with partner')
 
-nhanes2$Education = as.factor(nhanes2$Education) #Change to factor
-nhanes2$Education = recode(nhanes2$Education, '1' = '< 9th grade', '2' = '9-11th grade',
-                           '3' = 'High school graduate', '4' = 'Some college/Uni',
-                           '5' = 'College/Uni graduate or above')
+nhanes2$EducationX = as.factor(nhanes2$Education) #Create as a new variable in order to 
+#analyse the correlation of the original (numeric)
+nhanes2$EducationX = recode(nhanes2$EducationX, '1' = '< 9th grade', '2' = '9-11th grade',
+                            '3' = 'High school graduate', '4' = 'Some college/Uni',
+                            '5' = 'College/Uni graduate or above')
 
 
 
@@ -57,5 +57,8 @@ nhanes2[Age >39 & Age <50, agegroup := "40-49"]
 nhanes2[Age >49 & Age <60, agegroup := "50-59"]
 nhanes2[Age >59 & Age <70, agegroup := "60-69"]
 nhanes2[Age >69 & Age <81, agegroup := "70-80+"]
+
+nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
+nhanes2$Household_Size = as.factor((nhanes2$Household_Size))
 
 nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor

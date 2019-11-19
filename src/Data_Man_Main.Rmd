@@ -1,0 +1,259 @@
+---
+title: "Data_Man_Main"
+author: "Steven Carrell"
+date: "19/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath('..'))
+```
+
+
+```{r load project, include = FALSE}
+library(ProjectTemplate)
+load.project()
+
+```
+
+Head and summary of the Nhanes 2015/2016 dataset
+```{r Nhanes head and summary}
+knitr::kable(head(nhanes2))
+
+summary(nhanes2)
+
+```
+
+****3 functions created (saved in lib file). 
+1. 'corr_func' to quickly test correlations on the variables whilst exploring the data). The sole purpose using this rather than the built-in function is so the argument 'complete.obs' doesn't have to be typed each time. 
+2. 'grp_func' to quickly allow the user to input a variable to group by and a variable to analyse which will output the min, max, and mean. 
+3. 'prop_func' takes the following aruguments: dataframe, catagorical group variable, and binary variable to analyse. Then outputs a new dataframe of  proportions based on these arguments (split by gender). This will be used in the shiny dashboard.
+
+
+Below code to firstly find out all the columns containing numeric data (numeric_vars. Then a new data table is created with these values (numeric_data). 
+From this table, all the correlations were worked out wit the 'cor' function and saved under a variable names 'correlations'.
+A correlation plot was created to clearly show any positive or negative correlations between these variables.
+
+```{r correlation plot, echo=FALSE}
+
+numeric_vars = unlist(lapply(nhanes2, is.numeric))
+
+numeric_data = nhanes2[, ..numeric_vars]
+
+correlations = cor(numeric_data,use = "complete.obs")
+
+#Plot the correlations to clearly visualise how strongly correlated each comparison is
+corrplot(correlations)
+```
+
+
+Group by agegrp to look at proportions of people who have smoked 100 cigarettes in thei'r life and people who haven't. Assume that the the older generations will have a larger proportion of smokers than the youngers ones. Displayed in pie charts
+``` {r proportions of smoked_100}
+smoke_df = filter(nhanes2, Smoked_100!="Don't know" & Smoked_100!='Refused')
+prop = smoke_df %>%
+  count(.data[['agegroup']], .data[['Smoked_100']], na.rm = TRUE) %>%
+  mutate(prop = prop.table(n)) 
+smoke = group_by(prop, agegroup) %>% transmute(Smoked_100, Proportion = n/sum(n))
+
+p1 = smoke[1:2,]
+p2 = smoke[3:4,]
+p3 = smoke[5:6,]
+p4 = smoke[7:8,]
+
+pie1 = ggplot(p1, aes(x='', y=Proportion, fill =Smoked_100 )) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie2 = ggplot(p2, aes(x='', y=Proportion, fill =Smoked_100 )) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 30-39') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+
+pie3 = ggplot(p3, aes(x='', y=Proportion, fill =Smoked_100)) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 40-49') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie4 = ggplot(p4, aes(x='', y=Proportion, fill =Smoked_100)) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 50-59') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+grid.arrange(
+  pie1, pie2, pie3, pie4, nrow=2, ncol = 2, top = 'Proportion of people who have smoked 100 cigarettes'
+)
+
+```
+
+
+Below some box plots and scatter plots have been made influenced by the correlation plot. We hope to find some interetsing results from this. cor_func and grp_func was also used for futher testing. Based on the results some furhter hypothesis testing will be carried out.
+
+```{r box plots and scatter plots, warning=FALSE}
+#Box plots
+b1 = ggplot(nhanes2, aes(x=agegroup, y=Systolic_BP1, color=Gender)) + 
+  geom_boxplot()
+b1
+b1_test = filter(nhanes2, Age>69)
+grp_func(b1_test, 'Gender', 'Systolic_BP1')
+#Hypothesis test. 1 to see if men of all ages have higher Systolic BP than females, and 
+#another to test if females aged 70+ have a higher Systolic BP than men. (test below)
+
+#Filter dataframe to remove below value
+df2 = filter(nhanes2, EducationX !='9')
+b2 = ggplot(df2, aes(x=EducationX, y=Income_to_Pov, color=Gender)) + 
+  geom_boxplot()
+b2
+
+nhanes2$Household_Size = as.factor(nhanes2$Household_Size)
+b3 = ggplot(nhanes2, aes(x=Household_Size, y=Income_to_Pov, color=Gender)) + 
+  geom_boxplot()
+b3
+#Hypothesis test to see if females living alone earn more than men living on their own 
+#(test below)
+
+
+b4 = ggplot(nhanes2, aes(x=Race, y=Income_to_Pov, color=Gender)) + 
+  geom_boxplot()
+b4
+
+#Scatter plots
+s1 = ggplot(nhanes2, aes(x=BMXWAIST, y=BMXBMI, color=Gender)) + 
+  geom_point(alpha=0.2) +
+  scale_color_manual(breaks = c('Male', 'Female'), values = c('blue', 'red'))
+s1
+corr_func('BMXWAIST', 'BMXBMI')
+grp_func(nhanes2, 'Gender', 'BMXBMI')
+
+#Filter dataframe to remove below values
+df1 = filter(nhanes2, Smoked_100 !="Don't know" & Smoked_100 !='Refused')
+
+s2 = ggplot(df1, aes(x=Systolic_BP1, y=Systolic_BP2, color = Smoked_100)) + 
+  geom_point(alpha=0.2) + 
+  scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
+s2
+corr_func('Systolic_BP1', 'Systolic_BP2')
+
+s3 = ggplot(df1, aes(x=Systolic_BP1, y=BMXBMI, color = Smoked_100)) + 
+  geom_point(alpha=0.2) + 
+  scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
+s3
+corr_func('Systolic_BP1', 'BMXBMI')
+
+s4 = ggplot(df1, aes(x=Age, y=Systolic_BP1, color = Smoked_100)) + 
+  geom_point(alpha=0.2) + 
+  scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
+s4
+corr_func('Age', 'Systolic_BP1')
+
+grid.arrange(
+  s1, s2, s3, s4, nrow=2, ncol = 2, top = 'title'
+)
+
+```
+
+
+Shiny dashboard with interactive scatter plot and box plot. Interactive table using the prop_func
+```{r shiny dashboard}
+
+
+
+```
+
+Hypothesis testing - all below tests based on significance level of 0.05
+
+T-test to see if male who has smoked 100 cigarettes in his live and had at least 12 alcoholic drinks in 1 year has a higher Systolic blood pressure than a male who has not.
+H0 != H1
+
+```{r hypothesis testing}
+test1_1 = filter(nhanes2, Gender=='Male' & Smoked_100=='Yes' & Alcohol_Year=='Yes')
+test1_2 = filter(nhanes2, Gender=='Male' & Smoked_100=='No' & Alcohol_Year=='No')
+
+#Test using the t.test function
+t.test(test1_1$Systolic_BP1, test1_2$Systolic_BP1, alternative = "two.sided", 
+       var.equal = FALSE, paired = FALSE)
+#Test manually. As the std_dev on each sample are not similar, I have used the 
+#unpooled approach
+t1_n1 = nrow(test1_1)
+t1_n2 = nrow(test1_2)
+t1_u1 = mean(test1_1$Systolic_BP1, na.rm = TRUE)
+t1_u2 = mean(test1_2$Systolic_BP1, na.rm = TRUE)
+t1_sig1 = sd(test1_1$Systolic_BP1, na.rm = TRUE)
+t1_sig2 = sd(test1_2$Systolic_BP1, na.rm = TRUE)
+
+t_test = (t1_u1-t1_u2)/sqrt(((t1_sig1^2)/t1_n1)+((t1_sig2^2)/t1_n2))
+t_test
+
+#t-score for inbuilt_funtion = 4.6317, t-score worked out manually is 4.73. Both give a 
+#p-value of <0.00001 which provides us with sufficient evidence to reject the null hypothesis 
+#and say that a male who has drank and smoked does have a higher systolic blood pressure than
+#a male who has not. We can futher back this up by looking at the confidence intervals 
+#(2.7, 6.67) and seeing that 0 does not fall within this. Will run similar test for only the 
+#alcohol part of this (below)
+
+#T-test to see if somoen who has at least 12 alcoholic drinks in a year has a higher Systolic 
+#BP than someone who has not.
+
+test2_1 = filter(nhanes2, Gender=='Male' & Alcohol_Year=='Yes')
+test2_2 = filter(nhanes2, Gender=='Male' & Alcohol_Year=='No')
+
+#As the variance is similar (testing below), we will use thr pooled approach
+sd(test2_1$Systolic_BP1, na.rm = TRUE)
+sd(test2_2$Systolic_BP1, na.rm = TRUE)
+
+
+t.test(test2_1$Systolic_BP1, test2_2$Systolic_BP1, alternative = 'two.sided', var.equal = TRUE)
+
+#P-value of 0.02299 still provides us with enough evidence to reject the null and conclude that
+#'on average' people who drink 12 alcoholic drinkls per year have a higher systolic BP than
+#those tho don't
+
+#Hypothesis test 3 - Do men of all ages have higher Systolic BP than women.
+test3_1 = filter(nhanes2, Gender == 'Male')
+test3_2 = filter(nhanes2, Gender == 'Female')
+
+#Testing variancwe below. As the variance differs, we will use the unpooled approach
+sd(test3_1$Systolic_BP1, na.rm = TRUE)
+sd(test3_2$Systolic_BP1, na.rm = TRUE)
+
+t.test(test3_1$Systolic_BP1, test3_2$Systolic_BP1, alternative = 'two.sided', var.equal = FALSE)
+
+#Hypothesis test to see if women >69 have a higher Systolic BP than men of the similar age
+test4_1 = filter(nhanes2, Gender == 'Female' & Age > 69)
+test4_2 = filter(nhanes2, Gender == 'Male' & Age > 69)
+
+#Testing variancwe below. As the variance is similar, the pooled approach will be used
+sd(test4_1$Systolic_BP1, na.rm = TRUE)
+sd(test4_2$Systolic_BP1, na.rm = TRUE)
+
+t.test(test4_1$Systolic_BP1, test4_2$Systolic_BP1, alternative = 'two.sided', var.equal = TRUE)
+
+#Hypothesis test to see if females living alone earn more than males living alone.
+test5_1 = filter(nhanes2, Gender == 'Female' & Household_Size == '1')
+test5_2 = filter(nhanes2, Gender == 'Male' & Household_Size == '1')
+
+#Signifincant difference in variance, so we will used the unpooled approach
+sd(test5_1$Income_to_Pov, na.rm = TRUE)
+sd(test5_2$Income_to_Pov, na.rm = TRUE)
+
+t.test(test5_1$Income_to_Pov, test5_2$Income_to_Pov, alternative = 'two.sided', var.equal = FALSE)
+
+#With a p-value of 0.9063, we fail to reject the null hypothesis based on a significance 
+#level of 0.05. Confidence level also includes 0.
+
+
+```
+
+
+
+
