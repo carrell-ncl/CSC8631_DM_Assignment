@@ -7,7 +7,8 @@ load.project()
 nhanes2 = nhanes.2015.2016
 colnames(nhanes2)
 
-library(DT)
+#library(DT)
+
 #if(!require(devtools)) install.packages("devtools")
 #devtools::install_github("kassambara/ggpubr")
 #install.packages("ggpubr")
@@ -21,7 +22,6 @@ library(DT)
 # library(data.table)
 # library(broom)
 
-class(nhanes2)
 
 #Rename columns - created a new datas et incase I need to revert back to original
 nhanes2 = nhanes2 %>% rename(Gender = RIAGENDR, Age = RIDAGEYR, Race = RIDRETH1, 
@@ -63,8 +63,9 @@ nhanes2$Marital_Status = recode(nhanes2$Marital_Status, '1' = 'Married', '2'= 'W
                                 '3'= 'Divorced', '4'= 'Separated', '5'= 'Never Married', 
                                 '6'= 'Living with partner')
 
-nhanes2$Education = as.factor(nhanes2$Education) #Change to factor
-nhanes2$Education = recode(nhanes2$Education, '1' = '< 9th grade', '2' = '9-11th grade',
+nhanes2$EducationX = as.factor(nhanes2$Education) #Create as a new variable in order to 
+#analyse the correlation of the original (numeric)
+nhanes2$EducationX = recode(nhanes2$EducationX, '1' = '< 9th grade', '2' = '9-11th grade',
                            '3' = 'High school graduate', '4' = 'Some college/Uni',
                            '5' = 'College/Uni graduate or above')
 
@@ -90,7 +91,7 @@ numeric_vars = unlist(lapply(nhanes2, is.numeric))
 numeric_vars
 
 numeric_data = nhanes2[, ..numeric_vars]
-numeric_data
+class(numeric_data)
 
 #Work out correlations between each of these variables
 correlations = cor(numeric_data,use = "complete.obs")
@@ -106,7 +107,7 @@ corr_func = function(var1, var2){
   cor(v1, v2, use = 'complete.obs')
 }
 
-corr_func('Systolic_BP1', 'Systolic_BP2')
+
 
 #Function to take dataset, group_by and analyse variable to output mean, min and max
 grp_func = function(data, group_var, analyse_var){
@@ -117,7 +118,7 @@ grp_func = function(data, group_var, analyse_var){
   print(total)
 }
 
-library(scales) #Import library to convert to percentage
+#library(scales) #Import library to convert to percentage
 
 #Fuction that takes the following aruguments: dataframe, catagorical group variable, and binary variable to analyse. Then outputs 
 #a new dataframe of  proportions based on these arguments (split by gender)
@@ -152,60 +153,18 @@ prop_func = function(data, group_var, analyse_var, percentage=TRUE){
 dat = prop_func(nhanes2, 'agegroup', 'Smoked_100')
 dat
 
-class(nhanes2$Marital_Status)
-
-nhanes2 %>% filter(Education!='9' & Education !='2')
-n = TRUE
-
-if(n==TRUE){
-  y=dat}
-if(n==FALSE){
-  y=dat[1:2,]
-}
-
-
-tpie = ggplot(y, aes_string(x=1, y='Male_Proportion', fill ='Smoked_100')) + 
-  geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') +
-  coord_polar('y', start=0) +
-  #geom_text(aes_string(label = percent('Male_Proportion')), position = position_stack(vjust = 0.5), size = 5) +
-  #scale_fill_brewer(palette = 'Dark2') +
-  theme_void()
-tpie
-
-nhanes2 %>% filter(!is.na(.data[['Marital_Status']]!='77'))
-
-summary(nhanes2$Marital_Status)
-
-colnames(nhanes2)
-
-prop_func(nhanes2, 'Race', 'Alcohol_Year')
-filter(nhanes2, .data[['Gender']] =='Female')
 
 smoke_df = filter(nhanes2, Smoked_100!="Don't know" & Smoked_100!='Refused')
 prop = smoke_df %>%
   count(.data[['agegroup']], .data[['Smoked_100']], na.rm = TRUE) %>%
   mutate(prop = prop.table(n)) 
-
 smoke = group_by(prop, agegroup) %>% transmute(Smoked_100, Proportion = n/sum(n))
-smoke
-names(smoke)[1]<-"new_name"
 
-alc = filter(nhanes2, Alcohol_Year!="Don't know" & Alcohol_Year!='Refused')
-propa = alc %>%
-  count(.data[['agegroup']], .data[['Alcohol_Year']], na.rm = TRUE) %>%
-  mutate(prop = prop.table(n)) 
-
-alc2 = propa %>% group_by(propa[['agegroup']]) %>% transmute(.data[['Alcohol_Year']], Proportion1 = percent(n/sum(n)))
-alc2
-
-colnames(nhanes2)
 p1 = smoke[1:2,]
 p2 = smoke[3:4,]
 p3 = smoke[5:6,]
 p4 = smoke[7:8,]
 p1
-
-runExample("05_sliders")
 
 pie1 = ggplot(p1, aes(x='', y=Proportion, fill =Smoked_100 )) + 
   geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') + 
@@ -247,10 +206,9 @@ grid.arrange(
   pie1, pie2, pie3, pie4, nrow=2, ncol = 2, top = 'Proportion of people who have smoked 100 cigarettes'
 )
 
-testing = filter(nhanes2, agegroup == '18-29' & Smoked_100 !="Don't know" & Smoked_100 !='Refused')
-
+#testing = filter(nhanes2, agegroup == '18-29' & Smoked_100 !="Don't know" & Smoked_100 !='Refused')
+summary(nhanes2)
 #Box plots
-
 b1 = ggplot(nhanes2, aes(x=agegroup, y=Systolic_BP1, color=Gender)) + 
   geom_boxplot()
 b1
@@ -260,8 +218,8 @@ grp_func(b1_test, 'Gender', 'Systolic_BP1')
 #another to test if females aged 70+ have a higher Systolic BP than men. (test below)
 
 #Filter dataframe to remove below value
-df2 = filter(nhanes2, Education !='9')
-b2 = ggplot(df2, aes(x=Education, y=Income_to_Pov, color=Gender)) + 
+df2 = filter(nhanes2, EducationX !='9')
+b2 = ggplot(df2, aes(x=EducationX, y=Income_to_Pov, color=Gender)) + 
   geom_boxplot()
 b2
 
@@ -391,26 +349,7 @@ sd(test5_2$Income_to_Pov, na.rm = TRUE)
 t.test(test5_1$Income_to_Pov, test5_2$Income_to_Pov, alternative = 'two.sided', var.equal = FALSE)
 
 #With a p-value of 0.9063, we fail to reject the null hypothesis based on a significance 
-#level of 0.05. Confidence level also includes 0 which 
+#level of 0.05. Confidence level also includes 0.
 
-test1 = filter(nhanes2, Gender == 'Female', agegroup == '30-39')#, Smoked_100 == 'Yes')
-test2 = filter(nhanes2, Gender == 'Male', agegroup == '30-39')#, Smoked_100 == 'Yes')
-nrow(test2)
 
-#Hypoth testing
-#CHECK ASSUMPTIONS
-#UNPOOLED - Variance is not equal
-#1. Person in 50s has higher systolic BP to person in 20s
-#2. Somone with degree likely to earn more than someone with high school education
-#3. Someone with larger household size will typically earn less than somone in a small 
-#4. People who have smoked 100 in their life have higher SBP than someone who doesn't
 
-##Findings
-#People in larger houserholds have a lower income to poverty ratio on average
-#White-Americans have the highest income to poverty ratio whist Mexican-American's have the lowest.
-#Systolic blood pressure increases with age. Males have on average higher BP than females
-#until 70+ years where males appear to have a lower BP
-#Females appear to have higher BMI than men
-
-summary(nhanes2$Systolic_BP1)
-summary(nhanes2$Systolic_BP2)

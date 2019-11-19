@@ -1,16 +1,14 @@
-library(shiny)
-library(tidyverse) 
-library(gridExtra)
+#library(shiny)
+#library(tidyverse) 
+#library(gridExtra)
 #install.packages("shinythemes")
-library(shinythemes)
-library(rlang)
+#library(shinythemes)
+#library(rlang)
 
 ui <- fluidPage()
 server <- function(input, output) {} 
-shinyApp(ui = ui, server = server)
 
-class(nhanes2$Household_Size)
-summary(nhanes2)
+
 
 # Define UI
 ui <- fluidPage(
@@ -113,5 +111,5 @@ server <- function(input, output) {
   
 }
   
-class(nhanes2$agegroup)
-#runExample("06_tabsets")
+shinyApp(ui = ui, server = server)
+
