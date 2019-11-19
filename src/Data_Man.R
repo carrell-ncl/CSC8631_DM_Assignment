@@ -5,9 +5,9 @@ load.project()
 
 #Input details of the dataset.
 nhanes2 = nhanes.2015.2016
+colnames(nhanes2)
 
-nhanes2
-
+library(DT)
 #if(!require(devtools)) install.packages("devtools")
 #devtools::install_github("kassambara/ggpubr")
 #install.packages("ggpubr")
@@ -81,8 +81,9 @@ nhanes2[Age >59 & Age <70, agegroup := "60-69"]
 nhanes2[Age >69 & Age <81, agegroup := "70-80+"]
 
 nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
+nhanes2$Household_Size = as.factor((nhanes2$Household_Size))
 
-
+#*****End of wrangling*****
 
 #Find the numeric columns
 numeric_vars = unlist(lapply(nhanes2, is.numeric))
@@ -105,7 +106,7 @@ corr_func = function(var1, var2){
   cor(v1, v2, use = 'complete.obs')
 }
 
-corr('Systolic_BP1', 'Systolic_BP2')
+corr_func('Systolic_BP1', 'Systolic_BP2')
 
 #Function to take dataset, group_by and analyse variable to output mean, min and max
 grp_func = function(data, group_var, analyse_var){
@@ -116,13 +117,17 @@ grp_func = function(data, group_var, analyse_var){
   print(total)
 }
 
-#Fuction that takes dataframe, group variable, and binary variable to analyse. Then outputs a new dataframe
-#based on these arguments which provides ther proportions (split by gender)
+library(scales) #Import library to convert to percentage
+
+#Fuction that takes the following aruguments: dataframe, catagorical group variable, and binary variable to analyse. Then outputs 
+#a new dataframe of  proportions based on these arguments (split by gender)
 prop_func = function(data, group_var, analyse_var, percentage=TRUE){
   data = filter(data, .data[[analyse_var]]!="Don't know" & .data[[analyse_var]]!= 'Refused')
-  male = filter(data, Gender=='Male')
+  data2 = data %>% filter(!is.na(.data[[group_var]])) %>% filter(.data[[group_var]]!='77' & .data[[group_var]]!='9')
+  #data2 = data2 %>% filter(.data[[group_var]]!='9')
+  male = filter(data2, Gender=='Male')
   pro_tab1 = male %>%
-    count(.data[[group_var]], .data[[analyse_var]], na.rm = TRUE) %>%
+    count(.data[[group_var]], na.rm = TRUE, .data[[analyse_var]], na.rm = TRUE) %>%
     mutate(Proportion = prop.table(n))
   if (percentage==TRUE){
   pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = percent(n/sum(n)))
@@ -130,9 +135,9 @@ prop_func = function(data, group_var, analyse_var, percentage=TRUE){
   else{
     pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = n/sum(n))
   }
-  female = filter(data, Gender=='Female')
+  female = filter(data2, Gender=='Female')
   pro_tab2 = female %>%
-    count(.data[[group_var]], .data[[analyse_var]], na.rm = TRUE) %>%
+    count(.data[[group_var]],na.rm = TRUE, .data[[analyse_var]], na.rm = TRUE) %>%
     mutate(Proportion = prop.table(n))
   if (percentage==TRUE){
   pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = percent(n/sum(n)))
@@ -141,16 +146,37 @@ prop_func = function(data, group_var, analyse_var, percentage=TRUE){
     pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = n/sum(n))
   }
   pro3 = cbind(pro1, Female_Proportion = pro2$Female_Proportion)
-  
-  
+  names(pro3)[1]=group_var
   return(pro3)
-  
 }
-
-dat = prop_func(nhanes2, 'Race', 'Smoked_100', percentage = FALSE)
+dat = prop_func(nhanes2, 'agegroup', 'Smoked_100')
 dat
 
+class(nhanes2$Marital_Status)
 
+nhanes2 %>% filter(Education!='9' & Education !='2')
+n = TRUE
+
+if(n==TRUE){
+  y=dat}
+if(n==FALSE){
+  y=dat[1:2,]
+}
+
+
+tpie = ggplot(y, aes_string(x=1, y='Male_Proportion', fill ='Smoked_100')) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') +
+  coord_polar('y', start=0) +
+  #geom_text(aes_string(label = percent('Male_Proportion')), position = position_stack(vjust = 0.5), size = 5) +
+  #scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+tpie
+
+nhanes2 %>% filter(!is.na(.data[['Marital_Status']]!='77'))
+
+summary(nhanes2$Marital_Status)
+
+colnames(nhanes2)
 
 prop_func(nhanes2, 'Race', 'Alcohol_Year')
 filter(nhanes2, .data[['Gender']] =='Female')
@@ -160,7 +186,9 @@ prop = smoke_df %>%
   count(.data[['agegroup']], .data[['Smoked_100']], na.rm = TRUE) %>%
   mutate(prop = prop.table(n)) 
 
-smoke = group_by(prop, agegroup) %>% transmute(Smoked_100, Proportion1 = n/sum(n))
+smoke = group_by(prop, agegroup) %>% transmute(Smoked_100, Proportion = n/sum(n))
+smoke
+names(smoke)[1]<-"new_name"
 
 alc = filter(nhanes2, Alcohol_Year!="Don't know" & Alcohol_Year!='Refused')
 propa = alc %>%
@@ -170,15 +198,14 @@ propa = alc %>%
 alc2 = propa %>% group_by(propa[['agegroup']]) %>% transmute(.data[['Alcohol_Year']], Proportion1 = percent(n/sum(n)))
 alc2
 
-smoke
-
-library(scales) #Import library to convert to percentage
-
+colnames(nhanes2)
 p1 = smoke[1:2,]
 p2 = smoke[3:4,]
 p3 = smoke[5:6,]
 p4 = smoke[7:8,]
+p1
 
+runExample("05_sliders")
 
 pie1 = ggplot(p1, aes(x='', y=Proportion, fill =Smoked_100 )) + 
   geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') + 
@@ -385,3 +412,5 @@ nrow(test2)
 #until 70+ years where males appear to have a lower BP
 #Females appear to have higher BMI than men
 
+summary(nhanes2$Systolic_BP1)
+summary(nhanes2$Systolic_BP2)
