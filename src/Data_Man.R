@@ -2,11 +2,13 @@ setwd('/Users/carrell/Desktop/MSc/Data Management/CSC8631_DM_Assignment')
 #create.project('Data_Management_CSC8631')
 library(ProjectTemplate)
 load.project()
+library(kableExtra)
+#install.packages("kableExtra")
 
 #Input details of the dataset.
 nhanes2 = nhanes.2015.2016
 colnames(nhanes2)
-
+getwd()
 #library(DT)
 
 #if(!require(devtools)) install.packages("devtools")
@@ -81,8 +83,17 @@ nhanes2[Age >49 & Age <60, agegroup := "50-59"]
 nhanes2[Age >59 & Age <70, agegroup := "60-69"]
 nhanes2[Age >69 & Age <81, agegroup := "70-80+"]
 
+setDT(nhanes2)[Income_to_Pov >=0 & Income_to_Pov  <1, Income_Group := "1"]
+nhanes2[Income_to_Pov  >=1 & Income_to_Pov  <2, Income_Group := "2"]
+nhanes2[Income_to_Pov >=2 & Income_to_Pov <3, Income_Group := "3"]
+nhanes2[Income_to_Pov >=3 & Income_to_Pov <4, Income_Group := "4"]
+nhanes2[Income_to_Pov >=4 & Income_to_Pov <5, Income_Group := "5"]
+nhanes2$Income_Group = as.factor(nhanes2$Income_Group)
+
 nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
 nhanes2$Household_Size = as.factor((nhanes2$Household_Size))
+
+colnames(nhanes2)
 
 #*****End of wrangling*****
 
@@ -114,97 +125,122 @@ grp_func = function(data, group_var, analyse_var){
   grouped = data %>% group_by(data[[group_var]])
   detail= grouped %>% summarise(Mean=mean(.data[[analyse_var]], na.rm = TRUE), Max=max(.data[[analyse_var]], na.rm = TRUE), Min=min(.data[[analyse_var]], na.rm = TRUE))
   total = data %>% summarise(Mean=mean(.data[[analyse_var]], na.rm = TRUE), Max=max(.data[[analyse_var]], na.rm = TRUE), Min=min(.data[[analyse_var]], na.rm = TRUE))
-  print(detail)
-  print(total)
+  names(detail)[1]=group_var
+  return(detail)
+  #print(total)
 }
+
 
 #library(scales) #Import library to convert to percentage
 
 #Fuction that takes the following aruguments: dataframe, catagorical group variable, and binary variable to analyse. Then outputs 
 #a new dataframe of  proportions based on these arguments (split by gender)
 prop_func = function(data, group_var, analyse_var, percentage=TRUE){
-  data = filter(data, .data[[analyse_var]]!="Don't know" & .data[[analyse_var]]!= 'Refused')
+  data = filter(data, .data[[analyse_var]]!="Don't know" & .data[[analyse_var]]!= 'Refused' & .data[[analyse_var]]!='9')
   data2 = data %>% filter(!is.na(.data[[group_var]])) %>% filter(.data[[group_var]]!='77' & .data[[group_var]]!='9')
-  #data2 = data2 %>% filter(.data[[group_var]]!='9')
+  pro_tab0 = data2 %>%
+    count(.data[[group_var]], na.rm = TRUE, .data[[analyse_var]], na.rm = TRUE) %>%
+    mutate(Proportion = prop.table(n))
+  
   male = filter(data2, Gender=='Male')
   pro_tab1 = male %>%
     count(.data[[group_var]], na.rm = TRUE, .data[[analyse_var]], na.rm = TRUE) %>%
     mutate(Proportion = prop.table(n))
+  
   if (percentage==TRUE){
-  pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = percent(n/sum(n)))
+    pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = percent(n/sum(n)))
+    pro0 = pro_tab0 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Total_Proportion = percent(n/sum(n)))
   }
   else{
     pro1 = pro_tab1 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Male_Proportion = n/sum(n))
+    pro0 = pro_tab0 %>% group_by(pro_tab1[[group_var]]) %>% transmute(.data[[analyse_var]], Total_Proportion = n/sum(n))
   }
   female = filter(data2, Gender=='Female')
   pro_tab2 = female %>%
     count(.data[[group_var]],na.rm = TRUE, .data[[analyse_var]], na.rm = TRUE) %>%
     mutate(Proportion = prop.table(n))
   if (percentage==TRUE){
-  pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = percent(n/sum(n)))
+    pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = percent(n/sum(n)))
   }
   else {
     pro2 = pro_tab2 %>% group_by(pro_tab2[[group_var]]) %>% transmute(.data[[analyse_var]], Female_Proportion = n/sum(n))
   }
+  
   pro3 = cbind(pro1, Female_Proportion = pro2$Female_Proportion)
+  pro3 = cbind(pro3, Total_Proportion = pro0$Total_Proportion)
   names(pro3)[1]=group_var
   return(pro3)
 }
+  
+
 dat = prop_func(nhanes2, 'agegroup', 'Smoked_100')
-dat
+datatable(dat)
+
+smoked = prop_func(nhanes2, 'agegroup', 'Smoked_100', percentage = FALSE)
 
 
-smoke_df = filter(nhanes2, Smoked_100!="Don't know" & Smoked_100!='Refused')
-prop = smoke_df %>%
-  count(.data[['agegroup']], .data[['Smoked_100']], na.rm = TRUE) %>%
-  mutate(prop = prop.table(n)) 
-smoke = group_by(prop, agegroup) %>% transmute(Smoked_100, Proportion = n/sum(n))
+p1 = smoked[1:2,]
+p2 = smoked[3:4,]
+p3 = smoked[5:6,]
+p4 = smoked[7:8,]
+p5 = smoked[9:10,]
+p6 = smoked[11:12,]
 
-p1 = smoke[1:2,]
-p2 = smoke[3:4,]
-p3 = smoke[5:6,]
-p4 = smoke[7:8,]
-p1
-
-pie1 = ggplot(p1, aes(x='', y=Proportion, fill =Smoked_100 )) + 
+pie1 = ggplot(p1, aes(x='', y=Total_Proportion, fill =Smoked_100 )) + 
   geom_bar(stat='identity', width=1) + labs(title = 'Age - 18-29') + 
   coord_polar('y', start=0) + 
-  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  geom_text(aes(label = percent(Total_Proportion)), position = position_stack(vjust = 0.5), size = 4) +
   scale_fill_brewer(palette = 'Dark2') +
   theme_void()
 
 pie1
 
-pie2 = ggplot(p2, aes(x='', y=Proportion, fill =Smoked_100 )) + 
+pie2 = ggplot(p2, aes(x='', y=Total_Proportion, fill =Smoked_100 )) + 
   geom_bar(stat='identity', width=1) + labs(title = 'Age - 30-39') + 
   coord_polar('y', start=0) + 
-  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  geom_text(aes(label = percent(Total_Proportion)), position = position_stack(vjust = 0.5), size = 4) +
   scale_fill_brewer(palette = 'Dark2') +
   theme_void()
 
 pie2
 
-pie3 = ggplot(p3, aes(x='', y=Proportion, fill =Smoked_100)) + 
+pie3 = ggplot(p3, aes(x='', y=Total_Proportion, fill =Smoked_100)) + 
   geom_bar(stat='identity', width=1) + labs(title = 'Age - 40-49') + 
   coord_polar('y', start=0) + 
-  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  geom_text(aes(label = percent(Total_Proportion)), position = position_stack(vjust = 0.5), size = 4) +
   scale_fill_brewer(palette = 'Dark2') +
   theme_void()
 
 pie3
 
-pie4 = ggplot(p4, aes(x='', y=Proportion, fill =Smoked_100)) + 
+pie4 = ggplot(p4, aes(x='', y=Total_Proportion, fill =Smoked_100)) + 
   geom_bar(stat='identity', width=1) + labs(title = 'Age - 50-59') + 
   coord_polar('y', start=0) + 
-  geom_text(aes(label = percent(Proportion)), position = position_stack(vjust = 0.5), size = 5) +
+  geom_text(aes(label = percent(Total_Proportion)), position = position_stack(vjust = 0.5), size = 4) +
   scale_fill_brewer(palette = 'Dark2') +
   theme_void()
 
-pie4
+pie5 = ggplot(p5, aes(x='', y=Total_Proportion, fill =Smoked_100)) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 60-69') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Total_Proportion)), position = position_stack(vjust = 0.5), size = 4) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
+pie6 = ggplot(p6, aes(x='', y=Total_Proportion, fill =Smoked_100)) + 
+  geom_bar(stat='identity', width=1) + labs(title = 'Age - 70-80+') + 
+  coord_polar('y', start=0) + 
+  geom_text(aes(label = percent(Total_Proportion)), position = position_stack(vjust = 0.5), size = 4) +
+  scale_fill_brewer(palette = 'Dark2') +
+  theme_void()
+
 
 grid.arrange(
-  pie1, pie2, pie3, pie4, nrow=2, ncol = 2, top = 'Proportion of people who have smoked 100 cigarettes'
+  pie1, pie2, pie3, pie4, pie5, pie6, nrow=2, ncol = 3, top = 'Proportion of people who have smoked 100 cigarettes'
 )
+
+ed_smoke = prop_func(nhanes2, "EducationX", "Smoked_100")
+ed_smoke
 
 #testing = filter(nhanes2, agegroup == '18-29' & Smoked_100 !="Don't know" & Smoked_100 !='Refused')
 summary(nhanes2)
@@ -213,7 +249,8 @@ b1 = ggplot(nhanes2, aes(x=agegroup, y=Systolic_BP1, color=Gender)) +
   geom_boxplot()
 b1
 b1_test = filter(nhanes2, Age>69)
-grp_func(b1_test, 'Gender', 'Systolic_BP1')
+b1_fun = grp_func(b1_test, 'Gender', 'Systolic_BP1')
+b1_fun
 #Hypothesis test. 1 to see if men of all ages have higher Systolic BP than females, and 
 #another to test if females aged 70+ have a higher Systolic BP than men. (test below)
 
@@ -237,23 +274,24 @@ b4
 
 #Scatter plots to visualise some of the correlations
 
-s1 = ggplot(nhanes2, aes(x=BMXWAIST, y=BMXBMI, color=Gender)) + 
-  geom_point(alpha=0.2) +
-  scale_color_manual(breaks = c('Male', 'Female'), values = c('blue', 'red'))
-s1
-corr_func('BMXWAIST', 'BMXBMI')
-grp_func(nhanes2, 'Gender', 'BMXBMI')
-
 #Filter dataframe to remove below values
 df1 = filter(nhanes2, Smoked_100 !="Don't know" & Smoked_100 !='Refused')
 
-s2 = ggplot(df1, aes(x=Systolic_BP1, y=Systolic_BP2, color = Smoked_100)) + 
+s1 = ggplot(df1, aes(x=Systolic_BP1, y=Systolic_BP2, color = Smoked_100)) + 
   geom_point(alpha=0.2) + 
   scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
-s2
-corr_func('Systolic_BP1', 'Systolic_BP2')
+s1
+helper.corr_func('Systolic_BP1', 'Systolic_BP2')
 
-s3 = ggplot(df1, aes(x=Systolic_BP1, y=BMXBMI, color = Smoked_100)) + 
+s2 = ggplot(nhanes2, aes(x=BMXWT, y=Systolic_BP1, color=Gender)) + 
+  geom_point(alpha=0.2) +
+  scale_color_manual(breaks = c('Male', 'Female'), values = c('blue', 'red'))
+s2
+corr_func('BMXWT', 'Systolic_BP1')
+grp_func(nhanes2, 'Gender', 'BMXBMI')
+
+
+s3 = ggplot(df1, aes(x=BMXBMI, y=Systolic_BP1, color = Smoked_100)) + 
   geom_point(alpha=0.2) + 
   scale_color_manual(breaks = c('Yes', 'No'), values = c('blue', 'red'))
 s3
@@ -266,7 +304,7 @@ s4
 corr_func('Age', 'Systolic_BP1')
 
 grid.arrange(
-  s1, s2, s3, s4, nrow=2, ncol = 2, top = 'title'
+  s1, s2, s3, s4, nrow=2, ncol = 2, top = 'Testing some correlations'
 )
 
 
@@ -352,4 +390,71 @@ t.test(test5_1$Income_to_Pov, test5_2$Income_to_Pov, alternative = 'two.sided', 
 #level of 0.05. Confidence level also includes 0.
 
 
+# After some further analysis using the created Shiny dashboard, something interesting was 
+# found. Using the interactive box plots we can see that someone who has smoked 100 cigarettes 
+# in their life will on average earn less than someone who hasn't. Even more interesting, 
+# someone who drinks at least 12 alcoholic drinks per year will earn more on average than 
+# somoene who has not (illistrated by the first 2 plots below). Finally the 3rd box plot 
+# shows that someone who drinks 12 alcoholic beverages in a year and who has never smoked 100 has a significantly higher income to poverty ratio (on average) than someone who smoked and does not drink.
+# Based on these finding a hypothesis test will be carried out based on the first 2 plots 
+# to see if this is significant enough.
 
+df1 = filter(nhanes2, Smoked_100 !="Don't know" & Smoked_100 !='Refused' & Alcohol_Year!="Don't know" & Smoked_100 !='Refused')
+b5 = ggplot(df1, aes(x=Smoked_100, y=Income_to_Pov, color=Gender)) + 
+  geom_boxplot()
+
+b6 = ggplot(df1, aes(x=Alcohol_Year, y=Income_to_Pov, color=Gender)) + 
+  geom_boxplot()
+
+b7 = ggplot(df1, aes(x=Alcohol_Year, y=Income_to_Pov, color=Smoked_100)) + 
+  geom_boxplot()
+b7
+
+# 2 hypothesis tests. First to see if someone who has smoked 100 earns less than someone who 
+# has not, and second to see if someone who drinks 12 in a year earns more than somone who 
+# does not. If the results fail to reject the null, a further test will be carried out to see 
+# is someone who has not smoked 100 but who does drink at least 12 alcoholic beverages in a 
+# year earns more than somoen who smoked 100 and does not drink.
+
+test6_1 = filter(nhanes2, Smoked_100 == 'Yes')
+test6_2 = filter(nhanes2, Smoked_100 == 'No')
+
+#Difference in variance, so we will used the unpooled approach
+sd(test6_1$Income_to_Pov, na.rm = TRUE)
+sd(test6_2$Income_to_Pov, na.rm = TRUE)
+
+t.test(test6_1$Income_to_Pov, test6_2$Income_to_Pov, alternative = 'two.sided', var.equal = FALSE)
+
+test7_1 = filter(nhanes2, Alcohol_Year == 'Yes')
+test7_2 = filter(nhanes2, Alcohol_Year == 'No')
+
+#Difference in variance, so we will used the unpooled approach
+sd(test7_1$Income_to_Pov, na.rm = TRUE)
+sd(test7_2$Income_to_Pov, na.rm = TRUE)
+
+t.test(test7_1$Income_to_Pov, test7_2$Income_to_Pov, alternative = 'two.sided', var.equal = FALSE)
+
+
+
+b8 = ggplot(nhanes2, aes(x=Income_Group, y=Systolic_BP1, color=Gender)) + 
+  geom_boxplot()
+b8
+
+test8_1 = filter(nhanes2, EducationX == '< 9th grade')
+test8_2 = filter(nhanes2, EducationX == 'College/Uni graduate or above')
+
+#Difference in variance, so we will used the unpooled approach
+sd(test8_1$Systolic_BP1, na.rm = TRUE)
+sd(test8_2$Systolic_BP1, na.rm = TRUE)
+
+t.test(test8_1$Income_to_Pov, test8_2$Income_to_Pov, alternative = 'two.sided', var.equal = FALSE)
+
+
+test9_1 = filter(nhanes2, Household_Size == '1')
+test9_2 = filter(nhanes2, Household_Size == '2')
+
+#Variancxe very similar, so we will used the pooled approach
+sd(test9_1$Systolic_BP1, na.rm = TRUE)
+sd(test9_2$Systolic_BP1, na.rm = TRUE)
+
+t.test(test9_1$Income_to_Pov, test9_2$Income_to_Pov, alternative = 'two.sided', var.equal = TRUE)

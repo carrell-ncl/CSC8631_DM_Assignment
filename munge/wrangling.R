@@ -50,7 +50,6 @@ nhanes2$EducationX = recode(nhanes2$EducationX, '1' = '< 9th grade', '2' = '9-11
 
 #Create a near variable 'agegroup' in order to display ages into groups for easier and 
 #clearer analysis
-
 setDT(nhanes2)[Age >17 & Age <30, agegroup := "18-29"]
 nhanes2[Age >29 & Age <40, agegroup := "30-39"]
 nhanes2[Age >39 & Age <50, agegroup := "40-49"]
@@ -62,3 +61,14 @@ nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
 nhanes2$Household_Size = as.factor((nhanes2$Household_Size))
 
 nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
+
+#Adding a new variable (Income_Group) for better analysis
+setDT(nhanes2)[Income_to_Pov >=0 & Income_to_Pov  <1, Income_Group := "1"]
+nhanes2[Income_to_Pov  >=1 & Income_to_Pov  <2, Income_Group := "2"]
+nhanes2[Income_to_Pov >=2 & Income_to_Pov <3, Income_Group := "3"]
+nhanes2[Income_to_Pov >=3 & Income_to_Pov <4, Income_Group := "4"]
+nhanes2[Income_to_Pov >=4 & Income_to_Pov <5, Income_Group := "5"]
+nhanes2$Income_Group = as.factor(nhanes2$Income_Group)
+
+nhanes2$agegroup = as.factor(nhanes2$agegroup) #Change to factor
+nhanes2$Household_Size = as.factor((nhanes2$Household_Size))

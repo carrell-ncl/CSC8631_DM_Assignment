@@ -1,0 +1,90 @@
+commit bded57350ab5d0f0ec8f40999b0d1c12d900cf9a
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Tue Nov 19 19:53:49 2019 +0000
+
+    Update 7
+    
+    Trying to add shiny2.R
+
+commit 95e04f56377a169cf7ebba5cb9f1147796265c5f
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Tue Nov 19 19:01:09 2019 +0000
+
+    Update 7
+    
+    Moved code to RMarkdown
+
+commit 5dcdfad0b1781cd27cb01bb6361985bc695aa2c3
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Tue Nov 19 13:24:01 2019 +0000
+
+    Update 6
+    
+    Shiny dashboard added
+
+commit ac65878a528f7c361577b484febe123444764b4a
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Fri Nov 15 16:30:49 2019 +0000
+
+    Update 5
+    
+    Tidied the pie charts.
+    Added a new function to group proportions and split by gender.
+    Created a simple Shiny dashboard
+
+commit 897a3ddc145fd2e51cf5833156ac1c3859279d63
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Sat Nov 9 17:35:12 2019 +0000
+
+    Update 4
+    
+    Further hypothesis testing.
+    Group by agegroup to test proportions of people who smoke
+
+commit 456e2e872b505009feddf797283dc37c3724c8d6
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Fri Nov 8 20:51:55 2019 +0000
+
+    Update 3
+
+commit a7f180d1ae0d98a84617257db3a13b74dbdab91f
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Mon Nov 4 20:23:36 2019 +0000
+
+    ProjectTemplate version
+
+commit 762e8e835069b8151c8c906de4c81bec60ea2c49
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Mon Nov 4 20:20:24 2019 +0000
+
+    Clean up
+
+commit f38d6b6419fcdffa96bc0b49c5f5ba6af9693d47
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Sun Nov 3 21:01:00 2019 +0000
+
+    Update 2
+    
+    Testing some graphs + colours + grid arrange
+
+commit 291b57980aa76a1c35922baf63055eb3bd3f5e84
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Sat Nov 2 15:51:54 2019 +0000
+
+    Analysis 1
+    
+    Calculate correlations, change catagorical variables to factor, create come GGPLOTs, write function to take dataset, group and analyse variable to output mean, min and max
+
+commit c07a210c24b781dc9b49a8d86af60bdeb1e0edab
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Sat Nov 2 10:06:35 2019 +0000
+
+    Data wrangling
+    
+    Rename columns, relabel variables, create age groups column
+
+commit b282af3d33aeeea25687e0c5443271da7420eb65
+Author: Steven Carrell <steven.carrell83@gmail.com>
+Date:   Sat Nov 2 10:03:07 2019 +0000
+
+    Initial commit
